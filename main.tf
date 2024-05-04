@@ -47,14 +47,16 @@ resource "aws_launch_template" "this" {
   ram_disk_id                          = var.ram_disk_id
 
   dynamic "block_device_mappings" {
-    for_each = var.block_device_mappings
+    for_each = var.block_device_mappings != null ? [var.block_device_mappings] : []
+
     content {
-      device_name  = block_device_mappings.value.device_name
+      device_name  = try(block_device_mappings.value.device_name, null)
       no_device    = try(block_device_mappings.value.no_device, null)
       virtual_name = try(block_device_mappings.value.virtual_name, null)
 
       dynamic "ebs" {
-        for_each = flatten([try(block_device_mappings.value.ebs, [])])
+        for_each = try(block_device_mappings.value.ebs, [])
+
         content {
           delete_on_termination = try(ebs.value.delete_on_termination, null)
           encrypted             = try(ebs.value.encrypted, null)
@@ -70,12 +72,14 @@ resource "aws_launch_template" "this" {
   }
 
   dynamic "capacity_reservation_specification" {
-    for_each = length(var.capacity_reservation_specification) > 0 ? [var.capacity_reservation_specification] : []
+    for_each = var.capacity_reservation_specification != null ? [var.capacity_reservation_specification] : []
+
     content {
       capacity_reservation_preference = try(capacity_reservation_specification.value.capacity_reservation_preference, null)
 
       dynamic "capacity_reservation_target" {
         for_each = try([capacity_reservation_specification.value.capacity_reservation_target], [])
+
         content {
           capacity_reservation_id                 = try(capacity_reservation_target.value.capacity_reservation_id, null)
           capacity_reservation_resource_group_arn = try(capacity_reservation_target.value.capacity_reservation_resource_group_arn, null)
@@ -85,7 +89,8 @@ resource "aws_launch_template" "this" {
   }
 
   dynamic "cpu_options" {
-    for_each = length(var.cpu_options) > 0 ? [var.cpu_options] : []
+    for_each = var.cpu_options != null ? [var.cpu_options] : []
+
     content {
       core_count       = cpu_options.value.core_count
       threads_per_core = cpu_options.value.threads_per_core
@@ -93,28 +98,16 @@ resource "aws_launch_template" "this" {
   }
 
   dynamic "credit_specification" {
-    for_each = length(var.credit_specification) > 0 ? [var.credit_specification] : []
+    for_each = var.credit_specification != null ? [var.credit_specification] : []
+
     content {
       cpu_credits = credit_specification.value.cpu_credits
     }
   }
 
-  dynamic "elastic_gpu_specifications" {
-    for_each = length(var.elastic_gpu_specifications) > 0 ? [var.elastic_gpu_specifications] : []
-    content {
-      type = elastic_gpu_specifications.value.type
-    }
-  }
-
-  dynamic "elastic_inference_accelerator" {
-    for_each = length(var.elastic_inference_accelerator) > 0 ? [var.elastic_inference_accelerator] : []
-    content {
-      type = elastic_inference_accelerator.value.type
-    }
-  }
-
   dynamic "enclave_options" {
     for_each = length(var.enclave_options) > 0 ? [var.enclave_options] : []
+
     content {
       enabled = enclave_options.value.enabled
     }
@@ -129,6 +122,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "iam_instance_profile" {
     for_each = local.iam_instance_profile_name != null || local.iam_instance_profile_arn != null ? [1] : []
+
     content {
       name = local.iam_instance_profile_name
       arn  = local.iam_instance_profile_arn
@@ -136,12 +130,14 @@ resource "aws_launch_template" "this" {
   }
 
   dynamic "instance_market_options" {
-    for_each = length(var.instance_market_options) > 0 ? [var.instance_market_options] : []
+    for_each = var.instance_market_options != null ? [var.instance_market_options] : []
+
     content {
       market_type = instance_market_options.value.market_type
 
       dynamic "spot_options" {
         for_each = try([instance_market_options.value.spot_options], [])
+
         content {
           block_duration_minutes         = try(spot_options.value.block_duration_minutes, null)
           instance_interruption_behavior = try(spot_options.value.instance_interruption_behavior, null)
@@ -156,11 +152,12 @@ resource "aws_launch_template" "this" {
   instance_type = var.instance_type
 
   dynamic "instance_requirements" {
-    for_each = length(var.instance_requirements) > 0 ? [var.instance_requirements] : []
-    content {
+    for_each = var.instance_requirements != null ? [var.instance_requirements] : []
 
+    content {
       dynamic "accelerator_count" {
         for_each = try([instance_requirements.value.accelerator_count], [])
+
         content {
           max = try(accelerator_count.value.max, null)
           min = try(accelerator_count.value.min, null)
@@ -172,6 +169,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "accelerator_total_memory_mib" {
         for_each = try([instance_requirements.value.accelerator_total_memory_mib], [])
+
         content {
           max = try(accelerator_total_memory_mib.value.max, null)
           min = try(accelerator_total_memory_mib.value.min, null)
@@ -183,6 +181,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "baseline_ebs_bandwidth_mbps" {
         for_each = try([instance_requirements.value.baseline_ebs_bandwidth_mbps], [])
+
         content {
           max = try(baseline_ebs_bandwidth_mbps.value.max, null)
           min = try(baseline_ebs_bandwidth_mbps.value.min, null)
@@ -198,6 +197,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "memory_gib_per_vcpu" {
         for_each = try([instance_requirements.value.memory_gib_per_vcpu], [])
+
         content {
           max = try(memory_gib_per_vcpu.value.max, null)
           min = try(memory_gib_per_vcpu.value.min, null)
@@ -206,6 +206,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "memory_mib" {
         for_each = [instance_requirements.value.memory_mib]
+
         content {
           max = try(memory_mib.value.max, null)
           min = memory_mib.value.min
@@ -214,6 +215,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "network_interface_count" {
         for_each = try([instance_requirements.value.network_interface_count], [])
+
         content {
           max = try(network_interface_count.value.max, null)
           min = try(network_interface_count.value.min, null)
@@ -226,6 +228,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "total_local_storage_gb" {
         for_each = try([instance_requirements.value.total_local_storage_gb], [])
+
         content {
           max = try(total_local_storage_gb.value.max, null)
           min = try(total_local_storage_gb.value.min, null)
@@ -234,6 +237,7 @@ resource "aws_launch_template" "this" {
 
       dynamic "vcpu_count" {
         for_each = [instance_requirements.value.vcpu_count]
+
         content {
           max = try(vcpu_count.value.max, null)
           min = vcpu_count.value.min
@@ -244,6 +248,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "license_specification" {
     for_each = length(var.license_specifications) > 0 ? [var.license_specifications] : []
+
     content {
       license_configuration_arn = license_specification.value.license_configuration_arn
     }
@@ -251,6 +256,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "maintenance_options" {
     for_each = length(var.maintenance_options) > 0 ? [var.maintenance_options] : []
+
     content {
       auto_recovery = try(maintenance_options.value.auto_recovery, null)
     }
@@ -258,6 +264,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "metadata_options" {
     for_each = length(var.metadata_options) > 0 ? [var.metadata_options] : []
+
     content {
       http_endpoint               = try(metadata_options.value.http_endpoint, null)
       http_tokens                 = try(metadata_options.value.http_tokens, null)
@@ -269,6 +276,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "monitoring" {
     for_each = var.enable_monitoring ? [1] : []
+
     content {
       enabled = var.enable_monitoring
     }
@@ -276,6 +284,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "network_interfaces" {
     for_each = var.network_interfaces
+
     content {
       associate_carrier_ip_address = try(network_interfaces.value.associate_carrier_ip_address, null)
       associate_public_ip_address  = try(network_interfaces.value.associate_public_ip_address, null)
@@ -302,6 +311,7 @@ resource "aws_launch_template" "this" {
 
   dynamic "placement" {
     for_each = length(var.placement) > 0 ? [var.placement] : []
+
     content {
       affinity                = try(placement.value.affinity, null)
       availability_zone       = try(placement.value.availability_zone, null)
